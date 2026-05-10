@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/src/db";
@@ -32,20 +32,29 @@ export type PostDetail = {
 };
 
 export async function getAllPosts(): Promise<PostWithAuthor[]> {
-  const data = await db
-    .select({
-      id: posts.id,
-      title: posts.title,
-      content: posts.content,
-      date: posts.date,
-      tags: posts.tags,
-      ownerName: users.name,
-    })
-    .from(posts)
-    .leftJoin(users, eq(posts.owner, users.id))
-    .orderBy(desc(posts.date));
+  const getCachedPosts = unstable_cache(
+    async () => {
+      return db
+        .select({
+          id: posts.id,
+          title: posts.title,
+          content: posts.content,
+          date: posts.date,
+          tags: posts.tags,
+          ownerName: users.name,
+        })
+        .from(posts)
+        .leftJoin(users, eq(posts.owner, users.id))
+        .orderBy(desc(posts.date));
+    },
+    ["all-posts"],
+    {
+      revalidate: 10,
+      tags: ["posts"],
+    }
+  );
 
-  return data;
+  return getCachedPosts();
 }
 
 export async function getPostById(id: string): Promise<PostDetail | null> {

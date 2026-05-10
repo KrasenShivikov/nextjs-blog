@@ -1,5 +1,4 @@
 import Link from "next/link";
-export const revalidate = 5;
 import { Suspense } from "react";
 import { getAllPosts } from "@/app/actions/posts";
 
